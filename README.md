@@ -25,6 +25,11 @@ Given a note with a `url` property in its frontmatter, Image Fetcher scrapes the
    ---
    ```
 
+## Settings
+
+- **Frontmatter URL key** — the property the plugin reads the page URL from (default `url`).
+- **Frontmatter image key** — the property the chosen image is written to (default `image`).
+
 ## How it works
 
 - **Image sources** — collects `<img>` elements plus Open Graph (`og:image`) and Twitter card (`twitter:image`) meta tags. Relative URLs are resolved against the page URL and de-duplicated.

@@ -24,7 +24,8 @@ Built with **Svelte 5** (runes: `$props`, `$state`; `mount`/`unmount`) and **esb
 
 End-to-end flow:
 
-- `src/main.ts` — plugin entry. Registers a ribbon icon and the `fetch-images-for-url` command, both calling `fetchImagesForActiveNote()`. Reads `url` from the active note's frontmatter (via `metadataCache.getFileCache`), fetches images, and opens the picker modal with an `onSave` callback.
+- `src/main.ts` — plugin entry. Registers a ribbon icon and the `fetch-images-for-url` command, both calling `fetchImagesForActiveNote()`. Reads the URL from the active note's frontmatter (via `metadataCache.getFileCache`) using the configurable `frontmatterUrlKey`, fetches images, and opens the picker modal with an `onSave` callback. Holds the plugin `settings` (`frontmatterUrlKey`, `frontmatterImageKey`) with load/save.
+- `src/obsidian/image-fetcher-setting-tab.ts` — settings UI (mirrors the social-media-scraper format): text inputs for the URL and image frontmatter property names.
 - `src/utils/http-utils.ts` — `fetchImagesFromUrl(url)`: `requestUrl` GET + `DOMParser`, collects `og:image`/`twitter:image` meta tags and `<img src>`, resolves relative URLs against the page URL, dedupes. Returns `[]` on error.
 - `src/obsidian/image-picker-modal.ts` — `ImagePickerModal extends Modal`; mounts the Svelte component in `onOpen`, unmounts in `onClose`. Wraps the `onSave` callback so it closes the modal after choosing.
 - `src/svelte/image-picker.svelte` — the picker UI: thumbnail grid, single-select, Save button. Props: `{ imageUrls, onSave }`. Scoped styles use Obsidian CSS variables (`--background-*`, `--interactive-accent`, etc.).
@@ -34,6 +35,6 @@ End-to-end flow:
 
 - Use Obsidian's `requestUrl` (not `fetch`) for network calls — it avoids CORS issues.
 - Use `fileManager.processFrontMatter` to read/write frontmatter, not manual string manipulation.
-- Selection is single-image and the frontmatter key is `image` (both fixed, not configurable).
+- Selection is single-image. The URL and image frontmatter property names are configurable in settings (`frontmatterUrlKey` default `url`, `frontmatterImageKey` default `image`).
 - The frontmatter value is a wikilink to the saved image's filename (e.g. `[[name.png]]`), set in `save-image.ts`.
 - Git: branches and commits follow Conventional Commits. End commit messages with the `Co-Authored-By` trailer.

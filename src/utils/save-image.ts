@@ -23,12 +23,13 @@ const extensionFromUrl = (url: string): string | null => {
 
 /**
  * Download `imageUrl` into the vault's attachment folder and record the saved
- * path in the note's `image` frontmatter property.
+ * image as a wikilink in the note's frontmatter under `imageKey`.
  */
 export async function saveImageToNote(
 	app: App,
 	file: TFile,
 	imageUrl: string,
+	imageKey: string,
 ): Promise<void> {
 	const response = await requestUrl({ url: imageUrl, method: "GET" });
 
@@ -47,6 +48,6 @@ export async function saveImageToNote(
 	const created = await app.vault.createBinary(path, response.arrayBuffer);
 
 	await app.fileManager.processFrontMatter(file, (frontmatter) => {
-		frontmatter.image = `[[${created.name}]]`;
+		frontmatter[imageKey] = `[[${created.name}]]`;
 	});
 }

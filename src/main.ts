@@ -1,10 +1,25 @@
 import { Notice, Plugin, TFile } from "obsidian";
+import ImageFetcherSettingTab from "./obsidian/image-fetcher-setting-tab";
 import { ImagePickerModal } from "./obsidian/image-picker-modal";
 import { fetchImagesFromUrl } from "./utils/http-utils";
 import { saveImageToNote } from "./utils/save-image";
 
+export interface ImageFetcherSettings {
+	frontmatterUrlKey: string;
+	frontmatterImageKey: string;
+}
+
+const DEFAULT_SETTINGS: ImageFetcherSettings = {
+	frontmatterUrlKey: "url",
+	frontmatterImageKey: "image",
+};
+
 export default class ImageFetcherPlugin extends Plugin {
+	settings: ImageFetcherSettings = DEFAULT_SETTINGS;
+
 	async onload() {
+		await this.loadSettings();
+
 		this.addRibbonIcon("image", "Fetch images for URL", () => {
 			this.fetchImagesForActiveNote();
 		});
@@ -16,6 +31,8 @@ export default class ImageFetcherPlugin extends Plugin {
 				this.fetchImagesForActiveNote();
 			},
 		});
+
+		this.addSettingTab(new ImageFetcherSettingTab(this.app, this));
 	}
 
 	onunload() {}
@@ -37,9 +54,11 @@ export default class ImageFetcherPlugin extends Plugin {
 			return;
 		}
 
-		const url = frontmatter.url;
+		const url = frontmatter[this.settings.frontmatterUrlKey];
 		if (!url) {
-			new Notice("No url property found in the current file");
+			new Notice(
+				`No "${this.settings.frontmatterUrlKey}" property found in the current file`,
+			);
 			return;
 		}
 
@@ -52,12 +71,29 @@ export default class ImageFetcherPlugin extends Plugin {
 		const targetFile = file;
 		new ImagePickerModal(this.app, images, async (chosen) => {
 			try {
-				await saveImageToNote(this.app, targetFile, chosen);
+				await saveImageToNote(
+					this.app,
+					targetFile,
+					chosen,
+					this.settings.frontmatterImageKey,
+				);
 				new Notice("Saved image to note");
 			} catch (error) {
 				new Notice("Failed to save image");
 				console.error(error);
 			}
 		}).open();
+	}
+
+	async loadSettings() {
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			await this.loadData(),
+		);
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
 	}
 }

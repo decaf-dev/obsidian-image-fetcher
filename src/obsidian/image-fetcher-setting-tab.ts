@@ -1,0 +1,50 @@
+import { App, PluginSettingTab, Setting } from "obsidian";
+import type ImageFetcherPlugin from "src/main";
+
+export default class ImageFetcherSettingTab extends PluginSettingTab {
+	plugin: ImageFetcherPlugin;
+
+	constructor(app: App, plugin: ImageFetcherPlugin) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
+
+	display(): void {
+		const { containerEl } = this;
+
+		containerEl.empty();
+
+		containerEl.createEl("h2", { text: "Image Fetcher Settings" });
+
+		// Frontmatter URL key
+		new Setting(containerEl)
+			.setName("Frontmatter URL key")
+			.setDesc("The property name to read the page URL from in frontmatter")
+			.addText((text) =>
+				text
+					.setPlaceholder("url")
+					.setValue(this.plugin.settings.frontmatterUrlKey)
+					.onChange(async (value) => {
+						this.plugin.settings.frontmatterUrlKey = value || "url";
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// Frontmatter image key
+		new Setting(containerEl)
+			.setName("Frontmatter image key")
+			.setDesc(
+				"The property name to write the saved image to in frontmatter"
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("image")
+					.setValue(this.plugin.settings.frontmatterImageKey)
+					.onChange(async (value) => {
+						this.plugin.settings.frontmatterImageKey =
+							value || "image";
+						await this.plugin.saveSettings();
+					})
+			);
+	}
+}
