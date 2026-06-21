@@ -28,15 +28,22 @@
 	{:else}
 		<div class="image-grid">
 			{#each imageUrls as url (url)}
-				<button
-					type="button"
+				<div
+					role="button"
+					tabindex="0"
 					class="image-cell"
 					class:selected={url === selected}
 					onclick={() => select(url)}
+					onkeydown={(e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault();
+							select(url);
+						}
+					}}
 					title={url}
 				>
 					<img src={url} alt="" loading="lazy" />
-				</button>
+				</div>
 			{/each}
 		</div>
 	{/if}
@@ -85,9 +92,10 @@
 		flex: 1;
 		overflow-y: auto;
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+		grid-template-columns: repeat(2, 1fr);
 		gap: 0.75rem;
 		padding: 1rem 0;
+		align-items: start;
 	}
 
 	.image-cell {
@@ -97,7 +105,6 @@
 		border-radius: 6px;
 		overflow: hidden;
 		cursor: pointer;
-		aspect-ratio: 1 / 1;
 		transition: all 0.15s ease;
 	}
 
@@ -112,8 +119,8 @@
 
 	.image-cell img {
 		width: 100%;
-		height: 100%;
-		object-fit: cover;
+		height: auto;
+		object-fit: contain;
 		display: block;
 	}
 
