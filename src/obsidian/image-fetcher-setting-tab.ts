@@ -85,24 +85,6 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 					})
 			);
 
-		// Use embedded browser for Instagram
-		new Setting(containerEl)
-			.setName("Use embedded browser for Instagram")
-			.setDesc(
-				"Instagram renders its pages with JavaScript, so a plain fetch " +
-					"often returns no images. When enabled, Instagram URLs open in " +
-					"an embedded browser where you can log in and scroll to load " +
-					"posts before collecting images."
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.useBrowserForInstagram)
-					.onChange(async (value) => {
-						this.plugin.settings.useBrowserForInstagram = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
 		// Debug logging
 		new Setting(containerEl)
 			.setName("Debug logging")

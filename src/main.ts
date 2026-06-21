@@ -14,7 +14,6 @@ export interface ImageFetcherSettings {
 	frontmatterImageKey: string;
 	instagramCookie: string;
 	userAgent: string;
-	useBrowserForInstagram: boolean;
 	debug: boolean;
 }
 
@@ -26,7 +25,6 @@ const DEFAULT_SETTINGS: ImageFetcherSettings = {
 	frontmatterImageKey: "image",
 	instagramCookie: "",
 	userAgent: DEFAULT_USER_AGENT,
-	useBrowserForInstagram: true,
 	debug: false,
 };
 
@@ -87,7 +85,7 @@ export default class ImageFetcherPlugin extends Plugin {
 		// Instagram renders its grids client-side, so a plain HTTP fetch returns
 		// nothing useful. Render the page in an embedded browser instead, where
 		// the user is logged in and we can scroll to load posts and scrape them.
-		if (this.settings.useBrowserForInstagram && isInstagramHost(url)) {
+		if (isInstagramHost(url)) {
 			new BrowserFetchModal(this.app, url, requestOptions, (images) => {
 				this.presentImages(file, images, requestOptions);
 			}).open();
