@@ -62,6 +62,7 @@
 	}
 
 	.picker-header {
+		flex-shrink: 0;
 		padding: 0 0 1rem 0;
 		border-bottom: 1px solid var(--background-modifier-border);
 	}
@@ -88,6 +89,11 @@
 	}
 
 	.image-grid {
+		/* Scrollable region: caps its own height so the footer below stays
+		   visible, but sizes to content when there are only a few images.
+		   Using max-height (not flex-fill) avoids collapsing the grid. */
+		max-height: 60vh;
+		overflow-y: auto;
 		display: grid;
 		/* minmax(0, 1fr) stops a large image from blowing out its column. */
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -126,8 +132,10 @@
 	}
 
 	.picker-footer {
+		flex-shrink: 0;
 		padding: 1rem 0 0 0;
 		border-top: 1px solid var(--background-modifier-border);
+		background: var(--background-primary);
 		display: flex;
 		justify-content: flex-end;
 	}
