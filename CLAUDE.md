@@ -14,9 +14,10 @@ Plugin id: `image-fetcher` (see `manifest.json`). Desktop-only.
 npm run dev      # esbuild watch build
 npm run build    # tsc -noEmit type-check + esbuild production build
 npm run check    # svelte-check
+npm test         # bun test — unit tests for the utility functions
 ```
 
-There are no automated tests; verify changes by building and manually testing in a vault (build into `<vault>/.obsidian/plugins/image-fetcher/` and enable the plugin).
+Unit tests cover the pure utility functions (see Testing below). They do **not** exercise the Obsidian integration paths, so still verify end-to-end behavior by building and manually testing in a vault (build into `<vault>/.obsidian/plugins/image-fetcher/` and enable the plugin).
 
 ## Architecture
 
@@ -30,6 +31,16 @@ End-to-end flow:
 - `src/obsidian/image-picker-modal.ts` — `ImagePickerModal extends Modal`; mounts the Svelte component in `onOpen`, unmounts in `onClose`. Wraps the `onSave` callback so it closes the modal after choosing.
 - `src/svelte/image-picker.svelte` — the picker UI: thumbnail grid, single-select, Save button. Props: `{ imageUrls, onSave }`. Scoped styles use Obsidian CSS variables (`--background-*`, `--interactive-accent`, etc.).
 - `src/utils/save-image.ts` — `saveImageToNote(app, file, imageUrl)`: downloads via `requestUrl`, picks an extension from the `content-type` header (falling back to the URL), saves with `fileManager.getAvailablePathForAttachment` + `vault.createBinary`, then writes `image` via `fileManager.processFrontMatter`.
+
+## Testing
+
+Unit tests run on **Bun's** built-in runner (`bun:test`); Bun is also the package manager (`bun.lock`). Run with `npm test` or `bun test`.
+
+- Tests live in `test/` (e.g. `test/http-utils.test.ts`). Scope is the **pure** logic only — `isInstagramHost`, `buildRequestHeaders`, `bestFromSrcset`, `bestFromImg`, `describeHeaders`, `createDebugLogger`, `extensionFromUrl`. The Obsidian-bound paths (`fetchImagesFromUrl`, `saveImageToNote`) are not covered.
+- Helpers that need testing are exported from their modules (`bestFromSrcset`/`bestFromImg` in `http-utils.ts`, `extensionFromUrl` in `save-image.ts`).
+- `test/setup.ts` is a `bunfig.toml` preload that `mock.module("obsidian", …)`s the types-only `obsidian` package so Bun can load the modules under test; it must run before any test imports them.
+- `bestFromImg` is tested with a fake `{ getAttribute }` object cast to `Element` — no DOM dependency.
+- TS config: the root `tsconfig.json` excludes `test/` (keeps `tsc -noEmit` in the build green); `test/tsconfig.json` adds `@types/bun` so the editor resolves `bun:test`.
 
 ## Conventions
 
