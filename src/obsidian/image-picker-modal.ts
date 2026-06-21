@@ -36,16 +36,9 @@ export class ImagePickerModal extends Modal {
 		if (modalEl) {
 			modalEl.style.width = "720px";
 			modalEl.style.maxWidth = "90vw";
-			modalEl.style.height = "80vh";
-		}
-
-		const modalContentEl = contentEl.closest(
-			".modal-content",
-		) as HTMLElement | null;
-		if (modalContentEl) {
-			modalContentEl.style.height = "100%";
-			modalContentEl.style.display = "flex";
-			modalContentEl.style.flexDirection = "column";
+			// Cap height so long lists scroll inside the modal, but let shorter
+			// lists size to their content instead of forcing a full-height box.
+			modalEl.style.maxHeight = "80vh";
 		}
 	}
 

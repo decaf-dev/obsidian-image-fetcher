@@ -59,7 +59,6 @@
 	.image-picker {
 		display: flex;
 		flex-direction: column;
-		height: 100%;
 	}
 
 	.picker-header {
@@ -89,10 +88,9 @@
 	}
 
 	.image-grid {
-		flex: 1;
-		overflow-y: auto;
 		display: grid;
-		grid-template-columns: repeat(2, 1fr);
+		/* minmax(0, 1fr) stops a large image from blowing out its column. */
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 0.75rem;
 		padding: 1rem 0;
 		align-items: start;
@@ -105,7 +103,8 @@
 		border-radius: 6px;
 		overflow: hidden;
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: border-color 0.15s ease, box-shadow 0.15s ease;
+		text-align: center;
 	}
 
 	.image-cell:hover {
@@ -118,10 +117,12 @@
 	}
 
 	.image-cell img {
-		width: 100%;
-		height: auto;
-		object-fit: contain;
+		/* Constrain to the column width, never upscale past natural size, and
+		   preserve aspect ratio so images aren't squished or stretched. */
 		display: block;
+		max-width: 100%;
+		height: auto;
+		margin: 0 auto;
 	}
 
 	.picker-footer {
