@@ -1,4 +1,6 @@
 import { App, TFile, requestUrl } from "obsidian";
+import { buildRequestHeaders, type RequestOptions } from "./http-utils";
+import { createDebugLogger, describeHeaders } from "./log";
 
 const CONTENT_TYPE_EXTENSIONS: Record<string, string> = {
 	"image/png": "png",
@@ -30,8 +32,17 @@ export async function saveImageToNote(
 	file: TFile,
 	imageUrl: string,
 	imageKey: string,
+	options: RequestOptions,
 ): Promise<void> {
-	const response = await requestUrl({ url: imageUrl, method: "GET" });
+	const log = createDebugLogger(options.debug);
+	const headers = buildRequestHeaders(imageUrl, options);
+	log("Downloading image", imageUrl, "headers:", describeHeaders(headers));
+
+	const response = await requestUrl({
+		url: imageUrl,
+		method: "GET",
+		headers,
+	});
 
 	const contentType = (response.headers["content-type"] ?? "")
 		.split(";")[0]
@@ -39,6 +50,17 @@ export async function saveImageToNote(
 		.toLowerCase();
 	const ext =
 		CONTENT_TYPE_EXTENSIONS[contentType] ?? extensionFromUrl(imageUrl) ?? "png";
+	log(
+		"Download response",
+		"status:",
+		response.status,
+		"content-type:",
+		contentType || "(none)",
+		"bytes:",
+		response.arrayBuffer.byteLength,
+		"ext:",
+		ext,
+	);
 
 	const path = await app.fileManager.getAvailablePathForAttachment(
 		`${file.basename}-image.${ext}`,
@@ -50,4 +72,5 @@ export async function saveImageToNote(
 	await app.fileManager.processFrontMatter(file, (frontmatter) => {
 		frontmatter[imageKey] = `[[${created.name}]]`;
 	});
+	log("Saved attachment", created.path, "→ frontmatter", imageKey);
 }

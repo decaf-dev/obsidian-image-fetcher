@@ -7,11 +7,20 @@ import { saveImageToNote } from "./utils/save-image";
 export interface ImageFetcherSettings {
 	frontmatterUrlKey: string;
 	frontmatterImageKey: string;
+	instagramCookie: string;
+	userAgent: string;
+	debug: boolean;
 }
+
+export const DEFAULT_USER_AGENT =
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 const DEFAULT_SETTINGS: ImageFetcherSettings = {
 	frontmatterUrlKey: "url",
 	frontmatterImageKey: "image",
+	instagramCookie: "",
+	userAgent: DEFAULT_USER_AGENT,
+	debug: false,
 };
 
 export default class ImageFetcherPlugin extends Plugin {
@@ -62,7 +71,13 @@ export default class ImageFetcherPlugin extends Plugin {
 			return;
 		}
 
-		const images = await fetchImagesFromUrl(url);
+		const requestOptions = {
+			instagramCookie: this.settings.instagramCookie,
+			userAgent: this.settings.userAgent,
+			debug: this.settings.debug,
+		};
+
+		const images = await fetchImagesFromUrl(url, requestOptions);
 		if (images.length === 0) {
 			new Notice("No images found at the URL");
 			return;
@@ -76,6 +91,7 @@ export default class ImageFetcherPlugin extends Plugin {
 					targetFile,
 					chosen,
 					this.settings.frontmatterImageKey,
+					requestOptions,
 				);
 				new Notice("Saved image to note");
 			} catch (error) {
