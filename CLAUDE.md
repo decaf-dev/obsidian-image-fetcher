@@ -1,0 +1,39 @@
+# CLAUDE.md
+
+Guidance for working in this repository.
+
+## What this is
+
+**Obsidian Image Fetcher** — an Obsidian plugin that scrapes images from a web page and saves one to a note. The user puts a `url` in a note's frontmatter; the plugin fetches the page, shows the images in a picker modal, and on save downloads the chosen image into the vault and writes its path to the note's `image` frontmatter property.
+
+Plugin id: `image-fetcher` (see `manifest.json`). Desktop-only.
+
+## Commands
+
+```bash
+npm run dev      # esbuild watch build
+npm run build    # tsc -noEmit type-check + esbuild production build
+npm run check    # svelte-check
+```
+
+There are no automated tests; verify changes by building and manually testing in a vault (build into `<vault>/.obsidian/plugins/image-fetcher/` and enable the plugin).
+
+## Architecture
+
+Built with **Svelte 5** (runes: `$props`, `$state`; `mount`/`unmount`) and **esbuild** (`esbuild-svelte`, `css: "injected"` — component styles are bundled into `main.js`, there is no separate CSS file).
+
+End-to-end flow:
+
+- `src/main.ts` — plugin entry. Registers a ribbon icon and the `fetch-images-for-url` command, both calling `fetchImagesForActiveNote()`. Reads `url` from the active note's frontmatter (via `metadataCache.getFileCache`), fetches images, and opens the picker modal with an `onSave` callback.
+- `src/utils/http-utils.ts` — `fetchImagesFromUrl(url)`: `requestUrl` GET + `DOMParser`, collects `og:image`/`twitter:image` meta tags and `<img src>`, resolves relative URLs against the page URL, dedupes. Returns `[]` on error.
+- `src/obsidian/image-picker-modal.ts` — `ImagePickerModal extends Modal`; mounts the Svelte component in `onOpen`, unmounts in `onClose`. Wraps the `onSave` callback so it closes the modal after choosing.
+- `src/svelte/image-picker.svelte` — the picker UI: thumbnail grid, single-select, Save button. Props: `{ imageUrls, onSave }`. Scoped styles use Obsidian CSS variables (`--background-*`, `--interactive-accent`, etc.).
+- `src/utils/save-image.ts` — `saveImageToNote(app, file, imageUrl)`: downloads via `requestUrl`, picks an extension from the `content-type` header (falling back to the URL), saves with `fileManager.getAvailablePathForAttachment` + `vault.createBinary`, then writes `image` via `fileManager.processFrontMatter`.
+
+## Conventions
+
+- Use Obsidian's `requestUrl` (not `fetch`) for network calls — it avoids CORS issues.
+- Use `fileManager.processFrontMatter` to read/write frontmatter, not manual string manipulation.
+- Selection is single-image and the frontmatter key is `image` (both fixed, not configurable).
+- The frontmatter value is a plain vault-relative path string. If a `[[wikilink]]` embed is ever needed instead, change it in `save-image.ts`.
+- Git: branches and commits follow Conventional Commits. End commit messages with the `Co-Authored-By` trailer.
