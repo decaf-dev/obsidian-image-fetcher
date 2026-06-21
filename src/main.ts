@@ -1,7 +1,12 @@
 import { Notice, Plugin, TFile } from "obsidian";
+import { BrowserFetchModal } from "./obsidian/browser-fetch-modal";
 import ImageFetcherSettingTab from "./obsidian/image-fetcher-setting-tab";
 import { ImagePickerModal } from "./obsidian/image-picker-modal";
-import { fetchImagesFromUrl } from "./utils/http-utils";
+import {
+	fetchImagesFromUrl,
+	isInstagramHost,
+	type RequestOptions,
+} from "./utils/http-utils";
 import { saveImageToNote } from "./utils/save-image";
 
 export interface ImageFetcherSettings {
@@ -9,6 +14,7 @@ export interface ImageFetcherSettings {
 	frontmatterImageKey: string;
 	instagramCookie: string;
 	userAgent: string;
+	useBrowserForInstagram: boolean;
 	debug: boolean;
 }
 
@@ -20,6 +26,7 @@ const DEFAULT_SETTINGS: ImageFetcherSettings = {
 	frontmatterImageKey: "image",
 	instagramCookie: "",
 	userAgent: DEFAULT_USER_AGENT,
+	useBrowserForInstagram: true,
 	debug: false,
 };
 
@@ -71,24 +78,42 @@ export default class ImageFetcherPlugin extends Plugin {
 			return;
 		}
 
-		const requestOptions = {
+		const requestOptions: RequestOptions = {
 			instagramCookie: this.settings.instagramCookie,
 			userAgent: this.settings.userAgent,
 			debug: this.settings.debug,
 		};
 
+		// Instagram renders its grids client-side, so a plain HTTP fetch returns
+		// nothing useful. Render the page in an embedded browser instead, where
+		// the user is logged in and we can scroll to load posts and scrape them.
+		if (this.settings.useBrowserForInstagram && isInstagramHost(url)) {
+			new BrowserFetchModal(this.app, url, requestOptions, (images) => {
+				this.presentImages(file, images, requestOptions);
+			}).open();
+			return;
+		}
+
 		const images = await fetchImagesFromUrl(url, requestOptions);
+		this.presentImages(file, images, requestOptions);
+	}
+
+	/** Open the picker for the fetched images and save the chosen one. */
+	private presentImages(
+		file: TFile,
+		images: string[],
+		requestOptions: RequestOptions,
+	) {
 		if (images.length === 0) {
 			new Notice("No images found at the URL");
 			return;
 		}
 
-		const targetFile = file;
 		new ImagePickerModal(this.app, images, async (chosen) => {
 			try {
 				await saveImageToNote(
 					this.app,
-					targetFile,
+					file,
 					chosen,
 					this.settings.frontmatterImageKey,
 					requestOptions,

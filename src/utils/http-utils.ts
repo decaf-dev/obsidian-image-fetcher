@@ -11,7 +11,7 @@ export interface RequestOptions {
 const INSTAGRAM_HOSTS = ["instagram.com", "cdninstagram.com", "fbcdn.net"];
 
 /** Whether `url` points at Instagram or its image CDNs. */
-const isInstagramHost = (url: string): boolean => {
+export const isInstagramHost = (url: string): boolean => {
 	try {
 		const host = new URL(url).hostname;
 		return INSTAGRAM_HOSTS.some((h) => host === h || host.endsWith("." + h));
