@@ -1,39 +1,26 @@
-import { Notice, Plugin, TFile, normalizePath } from "obsidian";
-import ImageFetcherSettingTab from "./obsidian/image-fetcher-setting-tab";
-import { fetchTitleFromUrl } from "./utils/http-utils";
-import { formatTitleForMacOS } from "./utils/title-utils";
-interface ImageFetcherSettings {
-	appendNumberOnDuplicate: boolean;
-}
-
-const DEFAULT_SETTINGS: ImageFetcherSettings = {
-	appendNumberOnDuplicate: true,
-};
+import { Notice, Plugin, TFile } from "obsidian";
+import { ImagePickerModal } from "./obsidian/image-picker-modal";
+import { fetchImagesFromUrl } from "./utils/http-utils";
+import { saveImageToNote } from "./utils/save-image";
 
 export default class ImageFetcherPlugin extends Plugin {
-	settings: ImageFetcherSettings = DEFAULT_SETTINGS;
-
 	async onload() {
-		await this.loadSettings();
-
 		this.addRibbonIcon("image", "Fetch images for URL", () => {
-			this.renameToUrlTitle();
+			this.fetchImagesForActiveNote();
 		});
 
 		this.addCommand({
 			id: "fetch-images-for-url",
 			name: "Fetch images for URL",
 			callback: async () => {
-				this.renameToUrlTitle();
+				this.fetchImagesForActiveNote();
 			},
 		});
-
-		this.addSettingTab(new ImageFetcherSettingTab(this.app, this));
 	}
 
 	onunload() {}
 
-	private async renameToUrlTitle(file?: TFile) {
+	private async fetchImagesForActiveNote(file?: TFile) {
 		if (!file) {
 			const activeFile = this.app.workspace.getActiveFile();
 			if (!activeFile) {
@@ -56,57 +43,21 @@ export default class ImageFetcherPlugin extends Plugin {
 			return;
 		}
 
-		const title = await fetchTitleFromUrl(url);
-		if (!title) {
-			new Notice("Failed to fetch title from URL");
+		const images = await fetchImagesFromUrl(url);
+		if (images.length === 0) {
+			new Notice("No images found at the URL");
 			return;
 		}
 
-		try {
-			const formattedTitle = formatTitleForMacOS(title);
-
-			const targetPath = this.settings.appendNumberOnDuplicate
-				? this.resolveAvailablePath(file, formattedTitle)
-				: normalizePath(
-						file.parent
-							? `${file.parent.path}/${formattedTitle}.md`
-							: `${formattedTitle}.md`,
-					);
-
-			await this.app.vault.rename(file, targetPath);
-			new Notice(`Renamed file to ${targetPath}`);
-		} catch (error) {
-			new Notice("Failed to rename file");
-			console.error(error);
-		}
-	}
-
-	private resolveAvailablePath(file: TFile, baseName: string): string {
-		const dir = file.parent ? file.parent.path : "";
-		const build = (name: string) =>
-			normalizePath(dir ? `${dir}/${name}.md` : `${name}.md`);
-
-		let candidate = build(baseName);
-		let counter = 1;
-		// Skip names already taken by a *different* file; renaming a file to its
-		// own current name is a no-op and must not get a number appended.
-		while (true) {
-			const existing = this.app.vault.getAbstractFileByPath(candidate);
-			if (!existing || existing.path === file.path) return candidate;
-			candidate = build(`${baseName} ${counter}`);
-			counter++;
-		}
-	}
-
-	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			await this.loadData(),
-		);
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
+		const targetFile = file;
+		new ImagePickerModal(this.app, images, async (chosen) => {
+			try {
+				await saveImageToNote(this.app, targetFile, chosen);
+				new Notice("Saved image to note");
+			} catch (error) {
+				new Notice("Failed to save image");
+				console.error(error);
+			}
+		}).open();
 	}
 }
