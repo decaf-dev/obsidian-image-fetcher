@@ -13,7 +13,7 @@ const CONTENT_TYPE_EXTENSIONS: Record<string, string> = {
 	"image/bmp": "bmp",
 };
 
-const extensionFromUrl = (url: string): string | null => {
+export const extensionFromUrl = (url: string): string | null => {
 	try {
 		const pathname = new URL(url).pathname;
 		const match = pathname.match(/\.([a-z0-9]+)$/i);

@@ -43,7 +43,7 @@ export const buildRequestHeaders = (
  * Pick the highest-resolution URL from a `srcset` value. Entries are scored by
  * their width (`640w`) or pixel-density (`2x`) descriptor; the largest wins.
  */
-const bestFromSrcset = (srcset: string): string | null => {
+export const bestFromSrcset = (srcset: string): string | null => {
 	let best: { url: string; score: number } | null = null;
 	for (const entry of srcset.split(",")) {
 		const [rawUrl, descriptor] = entry.trim().split(/\s+/);
@@ -64,7 +64,7 @@ const bestFromSrcset = (srcset: string): string | null => {
  * Resolve an <img> to its full-size source, preferring the largest `srcset`
  * candidate and falling back through common lazy-load attributes.
  */
-const bestFromImg = (img: Element): string | null => {
+export const bestFromImg = (img: Element): string | null => {
 	const srcset =
 		img.getAttribute("srcset") ?? img.getAttribute("data-srcset");
 	if (srcset) {

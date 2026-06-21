@@ -6,6 +6,7 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"test": "bun test",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"check": "svelte-check --tsconfig ./tsconfig.json"
 	},
@@ -14,6 +15,7 @@
 	"license": "MIT",
 	"devDependencies": {
 		"@tsconfig/svelte": "^5.0.8",
+		"@types/bun": "^1.3.14",
 		"@types/node": "^22.20.0",
 		"@typescript-eslint/eslint-plugin": "8.32.0",
 		"@typescript-eslint/parser": "8.32.0",
