@@ -21,7 +21,7 @@ Given a note with a `url` property in its frontmatter, Image Fetcher scrapes the
    ```yaml
    ---
    url: https://example.com/article
-   image: attachments/my-note-image.png
+   image: "[[my-note-image.png]]"
    ---
    ```
 
@@ -29,7 +29,7 @@ Given a note with a `url` property in its frontmatter, Image Fetcher scrapes the
 
 - **Image sources** — collects `<img>` elements plus Open Graph (`og:image`) and Twitter card (`twitter:image`) meta tags. Relative URLs are resolved against the page URL and de-duplicated.
 - **Download location** — uses your vault's configured attachment folder (via Obsidian's `getAvailablePathForAttachment`), so files land where your other attachments go with a non-colliding name.
-- **Frontmatter** — the downloaded image's vault-relative path is written to the `image` property using Obsidian's frontmatter API.
+- **Frontmatter** — the downloaded image is written to the `image` property as a wikilink (e.g. `[[my-note-image.png]]`) using Obsidian's frontmatter API.
 
 ## Development
 

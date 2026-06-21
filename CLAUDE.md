@@ -35,5 +35,5 @@ End-to-end flow:
 - Use Obsidian's `requestUrl` (not `fetch`) for network calls — it avoids CORS issues.
 - Use `fileManager.processFrontMatter` to read/write frontmatter, not manual string manipulation.
 - Selection is single-image and the frontmatter key is `image` (both fixed, not configurable).
-- The frontmatter value is a plain vault-relative path string. If a `[[wikilink]]` embed is ever needed instead, change it in `save-image.ts`.
+- The frontmatter value is a wikilink to the saved image's filename (e.g. `[[name.png]]`), set in `save-image.ts`.
 - Git: branches and commits follow Conventional Commits. End commit messages with the `Co-Authored-By` trailer.

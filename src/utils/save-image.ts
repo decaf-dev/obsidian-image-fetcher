@@ -44,9 +44,9 @@ export async function saveImageToNote(
 		file.path,
 	);
 
-	await app.vault.createBinary(path, response.arrayBuffer);
+	const created = await app.vault.createBinary(path, response.arrayBuffer);
 
 	await app.fileManager.processFrontMatter(file, (frontmatter) => {
-		frontmatter.image = path;
+		frontmatter.image = `[[${created.name}]]`;
 	});
 }
