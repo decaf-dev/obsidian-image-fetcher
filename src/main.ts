@@ -12,7 +12,7 @@ import { saveImageToNote } from "./utils/save-image";
 export interface ImageFetcherSettings {
 	frontmatterUrlKey: string;
 	frontmatterImageKey: string;
-	instagramCookie: string;
+	instagramCookieSecretId: string;
 	userAgent: string;
 	debug: boolean;
 }
@@ -23,7 +23,7 @@ export const DEFAULT_USER_AGENT =
 const DEFAULT_SETTINGS: ImageFetcherSettings = {
 	frontmatterUrlKey: "url",
 	frontmatterImageKey: "image",
-	instagramCookie: "",
+	instagramCookieSecretId: "",
 	userAgent: DEFAULT_USER_AGENT,
 	debug: false,
 };
@@ -76,8 +76,14 @@ export default class ImageFetcherPlugin extends Plugin {
 			return;
 		}
 
+		const instagramCookie = this.settings.instagramCookieSecretId
+			? (this.app.secretStorage.getSecret(
+					this.settings.instagramCookieSecretId,
+				) ?? "")
+			: "";
+
 		const requestOptions: RequestOptions = {
-			instagramCookie: this.settings.instagramCookie,
+			instagramCookie,
 			userAgent: this.settings.userAgent,
 			debug: this.settings.debug,
 		};

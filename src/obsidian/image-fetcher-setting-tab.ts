@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, PluginSettingTab, SecretComponent, Setting } from "obsidian";
 import type ImageFetcherPlugin from "src/main";
 import { DEFAULT_USER_AGENT } from "src/main";
 
@@ -52,17 +52,16 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Instagram cookie")
 			.setDesc(
-				"Sent only to Instagram requests. Paste the full Cookie header " +
-					"(including sessionid) from a logged-in browser session to " +
-					"fetch private or login-walled posts. Stored in plaintext in " +
-					"the plugin's data."
+				"Sent only to Instagram requests. Select or create a secret " +
+					"holding the full Cookie header (including sessionid) from a " +
+					"logged-in browser session to fetch private or login-walled " +
+					"posts. Stored securely in Obsidian's secret storage."
 			)
-			.addTextArea((text) =>
-				text
-					.setPlaceholder("sessionid=...; ds_user_id=...")
-					.setValue(this.plugin.settings.instagramCookie)
+			.addComponent((el) =>
+				new SecretComponent(this.app, el)
+					.setValue(this.plugin.settings.instagramCookieSecretId)
 					.onChange(async (value) => {
-						this.plugin.settings.instagramCookie = value;
+						this.plugin.settings.instagramCookieSecretId = value;
 						await this.plugin.saveSettings();
 					})
 			);
