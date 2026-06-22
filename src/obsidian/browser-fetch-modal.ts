@@ -8,16 +8,46 @@ import type { RequestOptions } from "../utils/http-utils";
 const IG_PARTITION = "persist:image-fetcher-instagram";
 
 /**
+ * In-page collector, injected once per page load. Instagram virtualizes its
+ * grid — images scrolled off-screen are unmounted from the DOM — so scraping
+ * only at the end loses everything but the last screenful. Instead we scan the
+ * DOM on an interval (and the scroll loop pokes it too), accumulating every
+ * Instagram CDN image URL into a Set as it appears, before it gets unmounted.
+ * Idempotent: re-running (e.g. on the next dom-ready) is a no-op.
+ */
+const INIT_COLLECTOR_SCRIPT = `(() => {
+	if (window.__igCollector) return true;
+	const seen = new Set();
+	const scan = () => {
+		for (const img of document.querySelectorAll("img")) {
+			const src = img.currentSrc || img.src || "";
+			if (!/cdninstagram|fbcdn/.test(src)) continue;
+			const alt = (img.getAttribute("alt") || "").toLowerCase();
+			if (alt.includes("profile picture")) continue;
+			seen.add(src);
+		}
+	};
+	scan();
+	const interval = setInterval(scan, 400);
+	window.__igCollector = { seen, scan, interval };
+	return true;
+})();`;
+
+/** Expression returning how many images the collector has accumulated so far. */
+const COLLECTOR_COUNT_SCRIPT = `window.__igCollector ? window.__igCollector.seen.size : 0`;
+
+/**
  * Build the in-page collection script. When `scrollCount > 0` it first nudges
  * the grid that many times to load lazily-rendered posts (stopping early if the
- * page stops growing); when `scrollCount === 0` it scrapes only what is already
- * in the DOM — i.e. whatever the user loaded by scrolling/clicking by hand. It
- * then collects every Instagram CDN image URL the browser rendered (skipping
- * profile avatars). Runs in the webview's page context and returns a string[].
+ * page stops growing), letting the collector accumulate each new screenful;
+ * when `scrollCount === 0` it just returns whatever has accumulated so far from
+ * the user's own scrolling/clicking. Returns the full accumulated Set (falling
+ * back to a one-shot DOM scan if the collector failed to initialize).
  */
 const buildCollectScript = (scrollCount: number): string => `(async () => {
 	const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 	const scrollCount = ${Math.max(0, Math.floor(scrollCount))};
+	const collector = window.__igCollector;
 	// Nudge the grid to load more rows. Stops early if the page stops growing.
 	// Jitter the scroll target and wait so the activity looks less robotic.
 	let last = -1;
@@ -25,11 +55,16 @@ const buildCollectScript = (scrollCount: number): string => `(async () => {
 		const offset = Math.floor(Math.random() * 200) - 100; // -100..+100 px
 		window.scrollTo(0, document.body.scrollHeight + offset);
 		await sleep(1500 + Math.floor(Math.random() * 1500)); // 1500–3000 ms
+		if (collector) collector.scan();
 		const h = document.body.scrollHeight;
 		if (h === last) break;
 		last = h;
 	}
 	if (scrollCount > 0) window.scrollTo(0, 0);
+	if (collector) {
+		collector.scan();
+		return Array.from(collector.seen);
+	}
 	const urls = [];
 	const seen = new Set();
 	for (const img of Array.from(document.querySelectorAll("img"))) {
@@ -104,6 +139,7 @@ export class BrowserFetchModal extends Modal {
 	private log: DebugLogger;
 	private webview: any = null;
 	private done = false;
+	private countPoll: number | null = null;
 
 	constructor(
 		app: App,
@@ -176,16 +212,45 @@ export class BrowserFetchModal extends Modal {
 		wv.style.border = "1px solid var(--background-modifier-border)";
 		contentEl.appendChild(wv);
 
-		wv.addEventListener("dom-ready", () => {
+		wv.addEventListener("dom-ready", async () => {
+			// Install the accumulating collector so images are captured as they
+			// scroll into view, before Instagram unmounts them from the DOM.
+			try {
+				await wv.executeJavaScript(INIT_COLLECTOR_SCRIPT, false);
+			} catch (error) {
+				this.log("collector init failed", error);
+			}
 			collectBtn.disabled = false;
 			collectLoadedBtn.disabled = false;
 			status.setText(
 				'Ready. Scroll/click to load images, then click "Collect".',
 			);
+
+			// Poll the running tally so the user can watch it climb as they scroll.
+			if (this.countPoll == null) {
+				this.countPoll = window.setInterval(async () => {
+					if (this.done) return;
+					try {
+						const n: number = await wv.executeJavaScript(
+							COLLECTOR_COUNT_SCRIPT,
+							false,
+						);
+						status.setText(
+							`${n} image${n === 1 ? "" : "s"} collected. Scroll/click to load more, then click "Collect".`,
+						);
+					} catch {
+						/* page navigating or not ready; ignore this tick */
+					}
+				}, 1000);
+			}
 		});
 
 		const buttons = [collectBtn, collectLoadedBtn];
 		const runCollect = async (scrollCount: number) => {
+			if (this.countPoll != null) {
+				clearInterval(this.countPoll);
+				this.countPoll = null;
+			}
 			buttons.forEach((b) => (b.disabled = true));
 			status.setText(
 				scrollCount > 0
@@ -225,6 +290,10 @@ export class BrowserFetchModal extends Modal {
 	}
 
 	onClose() {
+		if (this.countPoll != null) {
+			clearInterval(this.countPoll);
+			this.countPoll = null;
+		}
 		if (!this.done) {
 			this.done = true;
 			this.onComplete([]); // closed without collecting
