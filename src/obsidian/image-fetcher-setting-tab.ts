@@ -15,7 +15,7 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "Image Fetcher Settings" });
+		new Setting(containerEl).setName("General").setHeading();
 
 		// Frontmatter URL key
 		new Setting(containerEl)
@@ -47,6 +47,8 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		new Setting(containerEl).setName("Instagram").setHeading();
 
 		// Instagram cookie
 		new Setting(containerEl)
@@ -126,6 +128,8 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		new Setting(containerEl).setName("Logs").setHeading();
 
 		// Debug logging
 		new Setting(containerEl)
