@@ -4,6 +4,7 @@ import ImageFetcherSettingTab from "./obsidian/image-fetcher-setting-tab";
 import { ImagePickerModal } from "./obsidian/image-picker-modal";
 import {
 	fetchImagesFromUrl,
+	instagramUsernameFromUrl,
 	isInstagramHost,
 	type RequestOptions,
 } from "./utils/http-utils";
@@ -13,6 +14,7 @@ export interface ImageFetcherSettings {
 	frontmatterUrlKey: string;
 	frontmatterImageKey: string;
 	instagramCookieSecretId: string;
+	instagramNameByUsername: boolean;
 	userAgent: string;
 	debug: boolean;
 }
@@ -24,6 +26,7 @@ const DEFAULT_SETTINGS: ImageFetcherSettings = {
 	frontmatterUrlKey: "url",
 	frontmatterImageKey: "image",
 	instagramCookieSecretId: "",
+	instagramNameByUsername: true,
 	userAgent: DEFAULT_USER_AGENT,
 	debug: false,
 };
@@ -93,18 +96,32 @@ export default class ImageFetcherPlugin extends Plugin {
 		// the user is logged in and we can scroll to load posts and scrape them.
 		if (isInstagramHost(url)) {
 			new BrowserFetchModal(this.app, url, requestOptions, (images) => {
-				this.presentImages(file, images, requestOptions);
+				this.presentImages(file, url, images, requestOptions);
 			}).open();
 			return;
 		}
 
 		const images = await fetchImagesFromUrl(url, requestOptions);
-		this.presentImages(file, images, requestOptions);
+		this.presentImages(file, url, images, requestOptions);
+	}
+
+	/**
+	 * Choose the filename stem for the saved image. For Instagram URLs the
+	 * username (e.g. `@handle` → `handle`) is preferred when the setting is on
+	 * and a username can be parsed; everything else falls back to the note title.
+	 */
+	private resolveBaseName(file: TFile, url: string): string {
+		if (this.settings.instagramNameByUsername) {
+			const username = instagramUsernameFromUrl(url);
+			if (username) return username;
+		}
+		return `${file.basename}-image`;
 	}
 
 	/** Open the picker for the fetched images and save the chosen one. */
 	private presentImages(
 		file: TFile,
+		url: string,
 		images: string[],
 		requestOptions: RequestOptions,
 	) {
@@ -112,6 +129,8 @@ export default class ImageFetcherPlugin extends Plugin {
 			new Notice("No images found at the URL");
 			return;
 		}
+
+		const baseName = this.resolveBaseName(file, url);
 
 		new ImagePickerModal(this.app, images, async (chosen) => {
 			try {
@@ -121,6 +140,7 @@ export default class ImageFetcherPlugin extends Plugin {
 					chosen,
 					this.settings.frontmatterImageKey,
 					requestOptions,
+					baseName,
 				);
 				new Notice("Saved image to note");
 			} catch (error) {

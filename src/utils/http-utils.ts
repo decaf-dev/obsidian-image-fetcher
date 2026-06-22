@@ -20,6 +20,38 @@ export const isInstagramHost = (url: string): boolean => {
 	}
 };
 
+// Leading path segments that are Instagram routes, not usernames.
+const INSTAGRAM_RESERVED_PATHS = new Set([
+	"p",
+	"reel",
+	"reels",
+	"tv",
+	"stories",
+	"explore",
+	"accounts",
+	"direct",
+]);
+
+/**
+ * Extract the Instagram username from a profile URL (the first path segment of
+ * e.g. `https://www.instagram.com/username/`). Returns null when the URL isn't
+ * an Instagram profile — non-Instagram hosts, the bare homepage, or a route
+ * like `/p/<shortcode>/` that carries no username.
+ */
+export const instagramUsernameFromUrl = (url: string): string | null => {
+	if (!isInstagramHost(url)) return null;
+	try {
+		const segments = new URL(url).pathname.split("/").filter(Boolean);
+		const first = segments[0];
+		if (!first) return null;
+		const username = first.replace(/^@/, "");
+		if (INSTAGRAM_RESERVED_PATHS.has(username.toLowerCase())) return null;
+		return username || null;
+	} catch {
+		return null;
+	}
+};
+
 /**
  * Build request headers for a fetch/download. The Instagram cookie is attached
  * ONLY when the target host is Instagram — never leak the session to other

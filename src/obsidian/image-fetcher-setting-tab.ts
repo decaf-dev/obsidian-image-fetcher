@@ -66,6 +66,24 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 					})
 			);
 
+		// Name Instagram images by username
+		new Setting(containerEl)
+			.setName("Name Instagram images by username")
+			.setDesc(
+				"For Instagram URLs, name the saved image after the profile " +
+					"username instead of the note title. Other sites and " +
+					"Instagram URLs without a username (e.g. /p/<shortcode>) " +
+					"still use the note title."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.instagramNameByUsername)
+					.onChange(async (value) => {
+						this.plugin.settings.instagramNameByUsername = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
 		// User-Agent
 		new Setting(containerEl)
 			.setName("User-Agent")

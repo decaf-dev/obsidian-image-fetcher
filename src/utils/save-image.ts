@@ -33,6 +33,7 @@ export async function saveImageToNote(
 	imageUrl: string,
 	imageKey: string,
 	options: RequestOptions,
+	baseName: string,
 ): Promise<void> {
 	const log = createDebugLogger(options.debug);
 	const headers = buildRequestHeaders(imageUrl, options);
@@ -63,7 +64,7 @@ export async function saveImageToNote(
 	);
 
 	const path = await app.fileManager.getAvailablePathForAttachment(
-		`${file.basename}-image.${ext}`,
+		`${baseName}.${ext}`,
 		file.path,
 	);
 

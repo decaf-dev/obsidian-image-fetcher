@@ -3,6 +3,7 @@ import {
 	bestFromImg,
 	bestFromSrcset,
 	buildRequestHeaders,
+	instagramUsernameFromUrl,
 	isInstagramHost,
 	type RequestOptions,
 } from "../src/utils/http-utils";
@@ -35,6 +36,44 @@ describe("isInstagramHost", () => {
 		expect(isInstagramHost("https://instagrams.com")).toBe(false);
 		expect(isInstagramHost("not a url")).toBe(false);
 		expect(isInstagramHost("")).toBe(false);
+	});
+});
+
+describe("instagramUsernameFromUrl", () => {
+	it("extracts the username from a profile URL", () => {
+		expect(
+			instagramUsernameFromUrl("https://www.instagram.com/nasa/"),
+		).toBe("nasa");
+		expect(instagramUsernameFromUrl("https://instagram.com/nasa")).toBe(
+			"nasa",
+		);
+		expect(
+			instagramUsernameFromUrl("https://www.instagram.com/nasa/?hl=en"),
+		).toBe("nasa");
+	});
+
+	it("strips a leading @ from the handle", () => {
+		expect(
+			instagramUsernameFromUrl("https://www.instagram.com/@nasa/"),
+		).toBe("nasa");
+	});
+
+	it("returns null for reserved routes that carry no username", () => {
+		expect(
+			instagramUsernameFromUrl("https://www.instagram.com/p/abc123/"),
+		).toBeNull();
+		expect(
+			instagramUsernameFromUrl("https://www.instagram.com/reel/abc/"),
+		).toBeNull();
+		expect(
+			instagramUsernameFromUrl("https://www.instagram.com/explore/"),
+		).toBeNull();
+	});
+
+	it("returns null for the homepage and non-Instagram or malformed URLs", () => {
+		expect(instagramUsernameFromUrl("https://www.instagram.com/")).toBeNull();
+		expect(instagramUsernameFromUrl("https://example.com/nasa")).toBeNull();
+		expect(instagramUsernameFromUrl("not a url")).toBeNull();
 	});
 });
 
