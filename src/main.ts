@@ -15,6 +15,7 @@ export interface ImageFetcherSettings {
 	frontmatterImageKey: string;
 	instagramCookieSecretId: string;
 	instagramNameByUsername: boolean;
+	instagramScrollCount: number;
 	userAgent: string;
 	debug: boolean;
 }
@@ -22,11 +23,14 @@ export interface ImageFetcherSettings {
 export const DEFAULT_USER_AGENT =
 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
+export const DEFAULT_INSTAGRAM_SCROLL_COUNT = 4;
+
 const DEFAULT_SETTINGS: ImageFetcherSettings = {
 	frontmatterUrlKey: "url",
 	frontmatterImageKey: "image",
 	instagramCookieSecretId: "",
 	instagramNameByUsername: true,
+	instagramScrollCount: DEFAULT_INSTAGRAM_SCROLL_COUNT,
 	userAgent: DEFAULT_USER_AGENT,
 	debug: false,
 };
@@ -95,9 +99,15 @@ export default class ImageFetcherPlugin extends Plugin {
 		// nothing useful. Render the page in an embedded browser instead, where
 		// the user is logged in and we can scroll to load posts and scrape them.
 		if (isInstagramHost(url)) {
-			new BrowserFetchModal(this.app, url, requestOptions, (images) => {
-				this.presentImages(file, url, images, requestOptions);
-			}).open();
+			new BrowserFetchModal(
+				this.app,
+				url,
+				requestOptions,
+				this.settings.instagramScrollCount,
+				(images) => {
+					this.presentImages(file, url, images, requestOptions);
+				},
+			).open();
 			return;
 		}
 

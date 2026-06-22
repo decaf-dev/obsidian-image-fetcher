@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, SecretComponent, Setting } from "obsidian";
 import type ImageFetcherPlugin from "src/main";
-import { DEFAULT_USER_AGENT } from "src/main";
+import { DEFAULT_INSTAGRAM_SCROLL_COUNT, DEFAULT_USER_AGENT } from "src/main";
 
 export default class ImageFetcherSettingTab extends PluginSettingTab {
 	plugin: ImageFetcherPlugin;
@@ -83,6 +83,31 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		// Instagram auto-scroll count
+		new Setting(containerEl)
+			.setName("Instagram auto-scroll count")
+			.setDesc(
+				'How many times the embedded browser scrolls to load more ' +
+					'posts when you click "Collect images". Set to 0 to disable ' +
+					'auto-scroll. The "Collect loaded (no scroll)" button always ' +
+					"ignores this and grabs only what you loaded by hand."
+			)
+			.addText((text) => {
+				text.inputEl.type = "number";
+				text.inputEl.min = "0";
+				return text
+					.setPlaceholder(String(DEFAULT_INSTAGRAM_SCROLL_COUNT))
+					.setValue(String(this.plugin.settings.instagramScrollCount))
+					.onChange(async (value) => {
+						const parsed = parseInt(value, 10);
+						this.plugin.settings.instagramScrollCount =
+							Number.isFinite(parsed) && parsed >= 0
+								? parsed
+								: DEFAULT_INSTAGRAM_SCROLL_COUNT;
+						await this.plugin.saveSettings();
+					});
+			});
 
 		// User-Agent
 		new Setting(containerEl)

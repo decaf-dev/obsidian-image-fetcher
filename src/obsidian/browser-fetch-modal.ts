@@ -8,18 +8,20 @@ import type { RequestOptions } from "../utils/http-utils";
 const IG_PARTITION = "persist:image-fetcher-instagram";
 
 /**
- * In-page script: scroll the page to load lazily-rendered posts, then collect
- * every Instagram CDN image URL the browser actually rendered (skipping profile
- * avatars). Runs in the webview's page context and returns a string[].
+ * Build the in-page collection script. When `scrollCount > 0` it first nudges
+ * the grid that many times to load lazily-rendered posts (stopping early if the
+ * page stops growing); when `scrollCount === 0` it scrapes only what is already
+ * in the DOM — i.e. whatever the user loaded by scrolling/clicking by hand. It
+ * then collects every Instagram CDN image URL the browser rendered (skipping
+ * profile avatars). Runs in the webview's page context and returns a string[].
  */
-const COLLECT_SCRIPT = `(async () => {
+const buildCollectScript = (scrollCount: number): string => `(async () => {
 	const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-	// Only nudge the grid a few times to load the first couple of rows — enough
-	// to pick from, without scrolling through the whole profile. Stops early if
-	// the page stops growing. Jitter the scroll target and wait so the activity
-	// looks less robotic.
+	const scrollCount = ${Math.max(0, Math.floor(scrollCount))};
+	// Nudge the grid to load more rows. Stops early if the page stops growing.
+	// Jitter the scroll target and wait so the activity looks less robotic.
 	let last = -1;
-	for (let i = 0; i < 4; i++) {
+	for (let i = 0; i < scrollCount; i++) {
 		const offset = Math.floor(Math.random() * 200) - 100; // -100..+100 px
 		window.scrollTo(0, document.body.scrollHeight + offset);
 		await sleep(1500 + Math.floor(Math.random() * 1500)); // 1500–3000 ms
@@ -27,7 +29,7 @@ const COLLECT_SCRIPT = `(async () => {
 		if (h === last) break;
 		last = h;
 	}
-	window.scrollTo(0, 0);
+	if (scrollCount > 0) window.scrollTo(0, 0);
 	const urls = [];
 	const seen = new Set();
 	for (const img of Array.from(document.querySelectorAll("img"))) {
@@ -97,6 +99,7 @@ const seedCookies = async (
 export class BrowserFetchModal extends Modal {
 	private url: string;
 	private options: RequestOptions;
+	private scrollCount: number;
 	private onComplete: (images: string[]) => void;
 	private log: DebugLogger;
 	private webview: any = null;
@@ -106,11 +109,13 @@ export class BrowserFetchModal extends Modal {
 		app: App,
 		url: string,
 		options: RequestOptions,
+		scrollCount: number,
 		onComplete: (images: string[]) => void,
 	) {
 		super(app);
 		this.url = url;
 		this.options = options;
+		this.scrollCount = scrollCount;
 		this.onComplete = onComplete;
 		this.log = createDebugLogger(options.debug);
 	}
@@ -135,6 +140,10 @@ export class BrowserFetchModal extends Modal {
 			cls: "mod-cta",
 		});
 		collectBtn.disabled = true;
+		const collectLoadedBtn = bar.createEl("button", {
+			text: "Collect loaded (no scroll)",
+		});
+		collectLoadedBtn.disabled = true;
 		const status = bar.createEl("span", {
 			text: "Loading… log in if prompted, then click Collect images.",
 		});
@@ -169,27 +178,43 @@ export class BrowserFetchModal extends Modal {
 
 		wv.addEventListener("dom-ready", () => {
 			collectBtn.disabled = false;
-			status.setText('Ready. Scroll to load more, then click "Collect images".');
+			collectLoadedBtn.disabled = false;
+			status.setText(
+				'Ready. Scroll/click to load images, then click "Collect".',
+			);
 		});
 
-		collectBtn.onclick = async () => {
-			collectBtn.disabled = true;
-			status.setText("Scrolling & collecting images…");
+		const buttons = [collectBtn, collectLoadedBtn];
+		const runCollect = async (scrollCount: number) => {
+			buttons.forEach((b) => (b.disabled = true));
+			status.setText(
+				scrollCount > 0
+					? "Scrolling & collecting images…"
+					: "Collecting loaded images…",
+			);
 			try {
 				const images: string[] = await wv.executeJavaScript(
-					COLLECT_SCRIPT,
+					buildCollectScript(scrollCount),
 					false,
 				);
-				this.log("browser collected images:", images?.length ?? 0);
+				this.log(
+					"browser collected images:",
+					images?.length ?? 0,
+					"scrolls:",
+					scrollCount,
+				);
 				this.finish(images ?? []);
 			} catch (error) {
 				this.log("collect failed", error);
 				console.error(error);
 				new Notice("Failed to collect images from the page");
-				collectBtn.disabled = false;
+				buttons.forEach((b) => (b.disabled = false));
 				status.setText("Failed. Try again.");
 			}
 		};
+
+		collectBtn.onclick = () => runCollect(this.scrollCount);
+		collectLoadedBtn.onclick = () => runCollect(0);
 	}
 
 	private finish(images: string[]) {
