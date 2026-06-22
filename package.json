@@ -29,6 +29,7 @@
 		"typescript": "5.8.3"
 	},
 	"dependencies": {
-		"svelte": "^5.56.3"
+		"svelte": "^5.56.3",
+		"svelte-tiny-virtual-list": "^3.0.1"
 	}
 }

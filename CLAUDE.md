@@ -21,7 +21,7 @@ Unit tests cover the pure utility functions (see Testing below). They do **not**
 
 ## Architecture
 
-Built with **Svelte 5** (runes: `$props`, `$state`; `mount`/`unmount`) and **esbuild** (`esbuild-svelte`, `css: "injected"` — component styles are bundled into `main.js`, there is no separate CSS file).
+Built with **Svelte 5** (runes: `$props`, `$state`, `$derived`, `$effect`; `mount`/`unmount`) and **esbuild** (`esbuild-svelte`, `css: "injected"` — component styles are bundled into `main.js`, there is no separate CSS file). `esbuild.config.mjs` sets `mainFields`/`conditions` to prefer the `"svelte"` export condition so Svelte component libraries (e.g. `svelte-tiny-virtual-list`) are pulled as `.svelte` source and recompiled with our Svelte version rather than as a prebuilt bundle.
 
 End-to-end flow:
 
@@ -29,7 +29,7 @@ End-to-end flow:
 - `src/obsidian/image-fetcher-setting-tab.ts` — settings UI, split into three `.setHeading()` sections. **General**: text inputs for the URL and image frontmatter property names. **Instagram**: a `SecretComponent` (`addComponent`) for selecting/creating the Instagram cookie secret in Obsidian's secret storage, a toggle to name Instagram images by username, a numeric auto-scroll count input, and a User-Agent input. **Logs**: a debug toggle.
 - `src/utils/http-utils.ts` — `fetchImagesFromUrl(url)`: `requestUrl` GET + `DOMParser`, collects `og:image`/`twitter:image` meta tags and `<img src>`, resolves relative URLs against the page URL, dedupes. Returns `[]` on error.
 - `src/obsidian/image-picker-modal.ts` — `ImagePickerModal extends Modal`; mounts the Svelte component in `onOpen`, unmounts in `onClose`. Wraps the `onSave` callback so it closes the modal after choosing.
-- `src/svelte/image-picker.svelte` — the picker UI: thumbnail grid, single-select, Save button. Props: `{ imageUrls, onSave }`. Scoped styles use Obsidian CSS variables (`--background-*`, `--interactive-accent`, etc.).
+- `src/svelte/image-picker.svelte` — the picker UI: single-select, Save button, and a header showing the total image count. The thumbnail grid is **virtualized** with `svelte-tiny-virtual-list` — the flat `imageUrls` are chunked into rows of `COLUMNS` (2) and the list renders one row per virtual item, so large result sets stay performant. Images show at their natural aspect ratio (no cropping): each image's aspect is measured on its `load` event into the `aspects` array, row heights are computed from the measured column width (`bind:clientWidth`) via a function-based `itemSize`, and a `sizeVersion` counter is bumped on each load so the derived `itemSize`/`listHeight` re-run and the list re-lays-out rows. Props: `{ imageUrls, onSave }`. Scoped styles use Obsidian CSS variables (`--background-*`, `--interactive-accent`, etc.).
 - `src/utils/save-image.ts` — `saveImageToNote(app, file, imageUrl, imageKey, options, baseName)`: downloads via `requestUrl`, picks an extension from the `content-type` header (falling back to the URL), saves to `<baseName>.<ext>` (the caller-supplied stem) with `fileManager.getAvailablePathForAttachment` + `vault.createBinary`, then writes `image` via `fileManager.processFrontMatter`.
 
 ## Testing

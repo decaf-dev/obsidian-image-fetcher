@@ -1,4 +1,6 @@
 <script lang="ts">
+	import VirtualList from "svelte-tiny-virtual-list";
+
 	interface ImagePickerProps {
 		imageUrls: string[];
 		onSave: (chosen: string) => void;
@@ -8,6 +10,70 @@
 
 	let selected = $state<string | null>(null);
 
+	const COLUMNS = 2;
+	const GAP = 12;
+	const CELL_BORDER = 2;
+	// Placeholder aspect (square) for images whose real dimensions haven't
+	// loaded yet — refined per image on its `load` event.
+	const DEFAULT_ASPECT = 1;
+
+	let containerWidth = $state(0);
+	let viewportHeight = $state(window.innerHeight);
+	// Bumped whenever an image's measured aspect changes, so the derived
+	// `itemSize`/`listHeight` recompute (and the virtual list re-lays-out rows).
+	let sizeVersion = $state(0);
+	// index → naturalWidth / naturalHeight, filled in as images load.
+	const aspects: number[] = [];
+
+	const rowCount = $derived(Math.ceil(imageUrls.length / COLUMNS));
+	// Pixel width of one column inside the row's grid (one gap between columns).
+	const columnWidth = $derived(Math.max(0, (containerWidth - GAP) / COLUMNS));
+
+	// Displayed height of cell `i`: the column-wide image at its own aspect
+	// ratio, plus the cell's borders. Rows take the tallest cell they hold.
+	function cellHeight(i: number): number {
+		const aspect = aspects[i] > 0 ? aspects[i] : DEFAULT_ASPECT;
+		return (columnWidth - CELL_BORDER * 2) / aspect + CELL_BORDER * 2;
+	}
+	function rowHeight(rowIndex: number): number {
+		const start = rowIndex * COLUMNS;
+		const end = Math.min(start + COLUMNS, imageUrls.length);
+		let height = 0;
+		for (let i = start; i < end; i++) height = Math.max(height, cellHeight(i));
+		return Math.ceil(height) + GAP;
+	}
+
+	// New closure whenever width or any measured aspect changes — the reference
+	// change is what makes the virtual list recompute its layout. The guard just
+	// reads both reactive deps (sizeVersion bumps as images measure).
+	const itemSize = $derived.by(() => {
+		if (sizeVersion < 0 || columnWidth < 0) return () => 0;
+		return (rowIndex: number) => rowHeight(rowIndex);
+	});
+	// Size the scroll area to its content, capped so it never crowds the modal.
+	const listHeight = $derived.by(() => {
+		if (sizeVersion < 0) return 0; // read sizeVersion so this re-runs on load
+		let total = 0;
+		for (let r = 0; r < rowCount; r++) total += rowHeight(r);
+		return Math.min(total, Math.round(viewportHeight * 0.6));
+	});
+
+	function rowUrls(rowIndex: number): string[] {
+		const start = rowIndex * COLUMNS;
+		return imageUrls.slice(start, start + COLUMNS);
+	}
+
+	function onImageLoad(event: Event, index: number) {
+		const img = event.currentTarget as HTMLImageElement;
+		if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+			const aspect = img.naturalWidth / img.naturalHeight;
+			if (aspects[index] !== aspect) {
+				aspects[index] = aspect;
+				sizeVersion++;
+			}
+		}
+	}
+
 	function select(url: string) {
 		selected = url;
 	}
@@ -15,6 +81,12 @@
 	function save() {
 		if (selected) onSave(selected);
 	}
+
+	$effect(() => {
+		const onResize = () => (viewportHeight = window.innerHeight);
+		window.addEventListener("resize", onResize);
+		return () => window.removeEventListener("resize", onResize);
+	});
 </script>
 
 <div class="image-picker">
@@ -26,25 +98,48 @@
 	{#if imageUrls.length === 0}
 		<div class="empty-state">No images were found on this page.</div>
 	{:else}
-		<div class="image-grid">
-			{#each imageUrls as url (url)}
-				<div
-					role="button"
-					tabindex="0"
-					class="image-cell"
-					class:selected={url === selected}
-					onclick={() => select(url)}
-					onkeydown={(e) => {
-						if (e.key === "Enter" || e.key === " ") {
-							e.preventDefault();
-							select(url);
-						}
-					}}
-					title={url}
+		<div class="list-region" bind:clientWidth={containerWidth}>
+			{#if containerWidth > 0}
+				<VirtualList
+					width="100%"
+					height={listHeight}
+					itemCount={rowCount}
+					{itemSize}
+					estimatedItemSize={columnWidth}
 				>
-					<img src={url} alt="" loading="lazy" />
-				</div>
-			{/each}
+					<div
+						slot="item"
+						let:index
+						let:style
+						class="virtual-row"
+						style="{style}display:grid;grid-template-columns:repeat({COLUMNS},minmax(0,1fr));gap:{GAP}px;padding-bottom:{GAP}px;box-sizing:border-box;align-items:start;"
+					>
+						{#each rowUrls(index) as url, col (url)}
+							<div
+								role="button"
+								tabindex="0"
+								class="image-cell"
+								class:selected={url === selected}
+								onclick={() => select(url)}
+								onkeydown={(e) => {
+									if (e.key === "Enter" || e.key === " ") {
+										e.preventDefault();
+										select(url);
+									}
+								}}
+								title={url}
+							>
+								<img
+									src={url}
+									alt=""
+									loading="lazy"
+									onload={(e) => onImageLoad(e, index * COLUMNS + col)}
+								/>
+							</div>
+						{/each}
+					</div>
+				</VirtualList>
+			{/if}
 		</div>
 	{/if}
 
@@ -88,18 +183,11 @@
 		color: var(--text-muted);
 	}
 
-	.image-grid {
-		/* Scrollable region: caps its own height so the footer below stays
-		   visible, but sizes to content when there are only a few images.
-		   Using max-height (not flex-fill) avoids collapsing the grid. */
-		max-height: 60vh;
-		overflow-y: auto;
-		display: grid;
-		/* minmax(0, 1fr) stops a large image from blowing out its column. */
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 0.75rem;
+	.list-region {
+		/* Full width so column count can be measured; the virtual list owns its
+		   own (content-capped) height and scrolling. */
+		width: 100%;
 		padding: 1rem 0;
-		align-items: start;
 	}
 
 	.image-cell {
@@ -110,7 +198,6 @@
 		overflow: hidden;
 		cursor: pointer;
 		transition: border-color 0.15s ease, box-shadow 0.15s ease;
-		text-align: center;
 	}
 
 	.image-cell:hover {
@@ -123,12 +210,11 @@
 	}
 
 	.image-cell img {
-		/* Constrain to the column width, never upscale past natural size, and
-		   preserve aspect ratio so images aren't squished or stretched. */
+		/* Full column width at the image's natural aspect ratio (no cropping);
+		   the row's height is computed to match the taller cell. */
 		display: block;
-		max-width: 100%;
+		width: 100%;
 		height: auto;
-		margin: 0 auto;
 	}
 
 	.picker-footer {

@@ -56,6 +56,11 @@ const context = await esbuild.context({
 	],
 	format: "cjs",
 	target: "es2018",
+	// Resolve Svelte component libraries (e.g. svelte-tiny-virtual-list) to their
+	// `.svelte` source via the "svelte" export condition so esbuild-svelte
+	// compiles them with our Svelte version instead of pulling a prebuilt bundle.
+	mainFields: ["svelte", "browser", "module", "main"],
+	conditions: ["svelte", "browser"],
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
