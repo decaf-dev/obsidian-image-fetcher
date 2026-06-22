@@ -13,27 +13,30 @@
 	const COLUMNS = 2;
 	const GAP = 12;
 	const CELL_BORDER = 2;
-	// Placeholder aspect (square) for images whose real dimensions haven't
-	// loaded yet — refined per image on its `load` event.
-	const DEFAULT_ASPECT = 1;
 
 	let containerWidth = $state(0);
 	let viewportHeight = $state(window.innerHeight);
-	// Bumped whenever an image's measured aspect changes, so the derived
+	// Bumped whenever an image's measured size changes, so the derived
 	// `itemSize`/`listHeight` recompute (and the virtual list re-lays-out rows).
 	let sizeVersion = $state(0);
-	// index → naturalWidth / naturalHeight, filled in as images load.
-	const aspects: number[] = [];
+	// index → natural pixel dimensions, filled in as images load.
+	const dims: { width: number; height: number }[] = [];
 
 	const rowCount = $derived(Math.ceil(imageUrls.length / COLUMNS));
 	// Pixel width of one column inside the row's grid (one gap between columns).
 	const columnWidth = $derived(Math.max(0, (containerWidth - GAP) / COLUMNS));
 
-	// Displayed height of cell `i`: the column-wide image at its own aspect
-	// ratio, plus the cell's borders. Rows take the tallest cell they hold.
+	// Displayed height of cell `i`: the image is scaled to fit the column width
+	// but never upscaled past its natural size, so small images keep their real
+	// dimensions instead of stretching. Plus the cell's borders. Rows take the
+	// tallest cell they hold; cells whose size isn't known yet fall back to a
+	// square placeholder.
 	function cellHeight(i: number): number {
-		const aspect = aspects[i] > 0 ? aspects[i] : DEFAULT_ASPECT;
-		return (columnWidth - CELL_BORDER * 2) / aspect + CELL_BORDER * 2;
+		const content = columnWidth - CELL_BORDER * 2;
+		const d = dims[i];
+		if (!d) return content + CELL_BORDER * 2;
+		const shownWidth = Math.min(d.width, content);
+		return (shownWidth * d.height) / d.width + CELL_BORDER * 2;
 	}
 	function rowHeight(rowIndex: number): number {
 		const start = rowIndex * COLUMNS;
@@ -66,9 +69,9 @@
 	function onImageLoad(event: Event, index: number) {
 		const img = event.currentTarget as HTMLImageElement;
 		if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-			const aspect = img.naturalWidth / img.naturalHeight;
-			if (aspects[index] !== aspect) {
-				aspects[index] = aspect;
+			const d = dims[index];
+			if (!d || d.width !== img.naturalWidth || d.height !== img.naturalHeight) {
+				dims[index] = { width: img.naturalWidth, height: img.naturalHeight };
 				sizeVersion++;
 			}
 		}
@@ -210,11 +213,13 @@
 	}
 
 	.image-cell img {
-		/* Full column width at the image's natural aspect ratio (no cropping);
-		   the row's height is computed to match the taller cell. */
+		/* Scale down to the column width at natural aspect ratio (no cropping),
+		   but never upscale past natural size — small images keep their real
+		   dimensions, centered in the cell. */
 		display: block;
-		width: 100%;
+		max-width: 100%;
 		height: auto;
+		margin: 0 auto;
 	}
 
 	.picker-footer {
