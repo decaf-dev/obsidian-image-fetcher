@@ -6,6 +6,5 @@
 	"description": "Fetch images from a URL and save one to your note",
 	"author": "DecafDev",
 	"authorUrl": "https://github.com/decaf-dev",
-	"fundingUrl": "https://ko-fi.com/decaf_dev",
 	"isDesktopOnly": true
 }
