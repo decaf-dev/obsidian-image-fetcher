@@ -48,6 +48,43 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 					})
 			);
 
+		new Setting(containerEl).setName("Image Name").setHeading();
+
+		// Name Instagram images by username
+		new Setting(containerEl)
+			.setName("Name Instagram images by username")
+			.setDesc(
+				"For Instagram URLs, name the saved image after the profile " +
+					"username instead of the note title. Other sites and " +
+					"Instagram URLs without a username (e.g. /p/<shortcode>) " +
+					"still use the note title."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.instagramNameByUsername)
+					.onChange(async (value) => {
+						this.plugin.settings.instagramNameByUsername = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// Name Threads images by username
+		new Setting(containerEl)
+			.setName("Name Threads images by username")
+			.setDesc(
+				"For Threads URLs, name the saved image after the profile " +
+					"username instead of the note title. Threads URLs without " +
+					"an @username still use the note title."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.threadsNameByUsername)
+					.onChange(async (value) => {
+						this.plugin.settings.threadsNameByUsername = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
 		new Setting(containerEl).setName("Instagram").setHeading();
 
 		// Instagram cookie
@@ -64,24 +101,6 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.instagramCookieSecretId)
 					.onChange(async (value) => {
 						this.plugin.settings.instagramCookieSecretId = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		// Name Instagram images by username
-		new Setting(containerEl)
-			.setName("Name Instagram images by username")
-			.setDesc(
-				"For Instagram URLs, name the saved image after the profile " +
-					"username instead of the note title. Other sites and " +
-					"Instagram URLs without a username (e.g. /p/<shortcode>) " +
-					"still use the note title."
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.instagramNameByUsername)
-					.onChange(async (value) => {
-						this.plugin.settings.instagramNameByUsername = value;
 						await this.plugin.saveSettings();
 					})
 			);

@@ -16,6 +16,7 @@ export interface ImageFetcherSettings {
 	frontmatterImageKey: string;
 	instagramCookieSecretId: string;
 	instagramNameByUsername: boolean;
+	threadsNameByUsername: boolean;
 	instagramScrollCount: number;
 	userAgent: string;
 	debug: boolean;
@@ -31,6 +32,7 @@ const DEFAULT_SETTINGS: ImageFetcherSettings = {
 	frontmatterImageKey: "image",
 	instagramCookieSecretId: "",
 	instagramNameByUsername: true,
+	threadsNameByUsername: true,
 	instagramScrollCount: DEFAULT_INSTAGRAM_SCROLL_COUNT,
 	userAgent: DEFAULT_USER_AGENT,
 	debug: false,
@@ -118,14 +120,17 @@ export default class ImageFetcherPlugin extends Plugin {
 
 	/**
 	 * Choose the filename stem for the saved image. For Instagram and Threads
-	 * URLs the username (e.g. `@handle` → `handle`) is preferred when the setting
-	 * is on and a username can be parsed; everything else falls back to the note
-	 * title.
+	 * URLs the username (e.g. `@handle` → `handle`) is preferred when the
+	 * matching per-site setting is on and a username can be parsed; everything
+	 * else falls back to the note title.
 	 */
 	private resolveBaseName(file: TFile, url: string): string {
 		if (this.settings.instagramNameByUsername) {
-			const username =
-				instagramUsernameFromUrl(url) ?? threadsUsernameFromUrl(url);
+			const username = instagramUsernameFromUrl(url);
+			if (username) return username;
+		}
+		if (this.settings.threadsNameByUsername) {
+			const username = threadsUsernameFromUrl(url);
 			if (username) return username;
 		}
 		return file.basename;
