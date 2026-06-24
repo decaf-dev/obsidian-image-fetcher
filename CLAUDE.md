@@ -11,10 +11,10 @@ Plugin id: `image-fetcher` (see `manifest.json`). Desktop-only.
 ## Commands
 
 ```bash
-npm run dev      # esbuild watch build
-npm run build    # tsc -noEmit type-check + esbuild production build
-npm run check    # svelte-check
-npm test         # bun test — unit tests for the utility functions
+bun run dev      # esbuild watch build
+bun run build    # tsc -noEmit type-check + esbuild production build
+bun run check    # svelte-check
+bun test         # unit tests for the utility functions
 ```
 
 Unit tests cover the pure utility functions (see Testing below). They do **not** exercise the Obsidian integration paths, so still verify end-to-end behavior by building and manually testing in a vault (build into `<vault>/.obsidian/plugins/image-fetcher/` and enable the plugin).
@@ -34,7 +34,7 @@ End-to-end flow:
 
 ## Testing
 
-Unit tests run on **Bun's** built-in runner (`bun:test`); Bun is also the package manager (`bun.lock`). Run with `npm test` or `bun test`.
+Unit tests run on **Bun's** built-in runner (`bun:test`); Bun is also the package manager (`bun.lock`). Run with `bun test`.
 
 - Tests live in `test/` (e.g. `test/http-utils.test.ts`). Scope is the **pure** logic only — `isInstagramHost`, `instagramUsernameFromUrl`, `isThreadsHost`, `threadsUsernameFromUrl`, `buildRequestHeaders`, `bestFromSrcset`, `bestFromImg`, `describeHeaders`, `createDebugLogger`, `extensionFromUrl`. The Obsidian-bound paths (`fetchImagesFromUrl`, `saveImageToNote`) are not covered.
 - Helpers that need testing are exported from their modules (`bestFromSrcset`/`bestFromImg` in `http-utils.ts`, `extensionFromUrl` in `save-image.ts`).

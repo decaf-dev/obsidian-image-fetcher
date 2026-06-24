@@ -41,14 +41,14 @@ Given a note with a `url` property in its frontmatter, Image Fetcher scrapes the
 This plugin is built with [Svelte 5](https://svelte.dev) and [esbuild](https://esbuild.github.io).
 
 ```bash
-npm install      # install dependencies
-npm run dev      # build and watch for changes
-npm run build    # type-check and produce a production build
-npm run check    # run svelte-check
-npm test         # run the unit tests (bun test)
+bun install      # install dependencies
+bun run dev      # build and watch for changes
+bun run build    # type-check and produce a production build
+bun run check    # run svelte-check
+bun test         # run the unit tests
 ```
 
-Unit tests for the utility functions live in `test/` and run on [Bun's](https://bun.sh) built-in test runner — run them with `npm test` or `bun test`. To test the plugin end to end, build into a vault's `.obsidian/plugins/image-fetcher/` folder and enable the plugin in Obsidian's settings.
+Unit tests for the utility functions live in `test/` and run on [Bun's](https://bun.sh) built-in test runner — run them with `bun test`. To test the plugin end to end, build into a vault's `.obsidian/plugins/image-fetcher/` folder and enable the plugin in Obsidian's settings.
 
 ## License
 
