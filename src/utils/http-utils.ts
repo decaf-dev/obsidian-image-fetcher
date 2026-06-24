@@ -20,27 +20,67 @@ export const isInstagramHost = (url: string): boolean => {
 	}
 };
 
+// Leading path segments that are Instagram routes, not usernames.
+const INSTAGRAM_RESERVED_PATHS = new Set([
+	"p",
+	"reel",
+	"reels",
+	"tv",
+	"stories",
+	"explore",
+	"accounts",
+	"direct",
+]);
+
 /**
- * Derive an image filename stem from `url` using a list of configured URL
- * prefixes. The first prefix that `url` starts with wins: the remainder after
- * the prefix is stripped of any query string / hash and reduced to its first
- * path segment — so a prefix of `https://instagram.com/p/` on
- * `https://instagram.com/p/ABC123/?hl=en` yields `ABC123`. More specific
- * prefixes should be listed first. Returns null when no prefix matches or the
- * match yields no segment, so callers can fall back to another name.
+ * Extract the Instagram username from a profile URL (the first path segment of
+ * e.g. `https://www.instagram.com/username/`). Returns null when the URL isn't
+ * an Instagram profile — non-Instagram hosts, the bare homepage, or a route
+ * like `/p/<shortcode>/` that carries no username.
  */
-export const imageNameFromUrl = (
-	url: string,
-	prefixes: string[],
-): string | null => {
-	for (const prefix of prefixes) {
-		if (!prefix || !url.startsWith(prefix)) continue;
-		const rest = url.slice(prefix.length);
-		const beforeQuery = rest.split(/[?#]/)[0];
-		const segment = beforeQuery.split("/").filter(Boolean)[0];
-		if (segment) return segment;
+export const instagramUsernameFromUrl = (url: string): string | null => {
+	if (!isInstagramHost(url)) return null;
+	try {
+		const segments = new URL(url).pathname.split("/").filter(Boolean);
+		const first = segments[0];
+		if (!first) return null;
+		const username = first.replace(/^@/, "");
+		if (INSTAGRAM_RESERVED_PATHS.has(username.toLowerCase())) return null;
+		return username || null;
+	} catch {
+		return null;
 	}
-	return null;
+};
+
+const THREADS_HOSTS = ["threads.net", "threads.com"];
+
+/** Whether `url` points at Threads. */
+export const isThreadsHost = (url: string): boolean => {
+	try {
+		const host = new URL(url).hostname;
+		return THREADS_HOSTS.some((h) => host === h || host.endsWith("." + h));
+	} catch {
+		return false;
+	}
+};
+
+/**
+ * Extract the Threads username from a profile URL. Threads always prefixes the
+ * handle with `@` in the path (e.g. `https://www.threads.net/@username` or
+ * `.../@username/post/<id>`), so the username is the first path segment when it
+ * starts with `@`. Returns null for non-Threads hosts, the bare homepage, or
+ * routes like `/search` that aren't `@`-prefixed handles.
+ */
+export const threadsUsernameFromUrl = (url: string): string | null => {
+	if (!isThreadsHost(url)) return null;
+	try {
+		const first = new URL(url).pathname.split("/").filter(Boolean)[0];
+		if (!first || !first.startsWith("@")) return null;
+		const username = first.slice(1);
+		return username || null;
+	} catch {
+		return null;
+	}
 };
 
 /**
