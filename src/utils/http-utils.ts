@@ -52,6 +52,37 @@ export const instagramUsernameFromUrl = (url: string): string | null => {
 	}
 };
 
+const THREADS_HOSTS = ["threads.net", "threads.com"];
+
+/** Whether `url` points at Threads. */
+export const isThreadsHost = (url: string): boolean => {
+	try {
+		const host = new URL(url).hostname;
+		return THREADS_HOSTS.some((h) => host === h || host.endsWith("." + h));
+	} catch {
+		return false;
+	}
+};
+
+/**
+ * Extract the Threads username from a profile URL. Threads always prefixes the
+ * handle with `@` in the path (e.g. `https://www.threads.net/@username` or
+ * `.../@username/post/<id>`), so the username is the first path segment when it
+ * starts with `@`. Returns null for non-Threads hosts, the bare homepage, or
+ * routes like `/search` that aren't `@`-prefixed handles.
+ */
+export const threadsUsernameFromUrl = (url: string): string | null => {
+	if (!isThreadsHost(url)) return null;
+	try {
+		const first = new URL(url).pathname.split("/").filter(Boolean)[0];
+		if (!first || !first.startsWith("@")) return null;
+		const username = first.slice(1);
+		return username || null;
+	} catch {
+		return null;
+	}
+};
+
 /**
  * Build request headers for a fetch/download. The Instagram cookie is attached
  * ONLY when the target host is Instagram — never leak the session to other

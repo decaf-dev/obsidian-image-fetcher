@@ -6,6 +6,7 @@ import {
 	fetchImagesFromUrl,
 	instagramUsernameFromUrl,
 	isInstagramHost,
+	threadsUsernameFromUrl,
 	type RequestOptions,
 } from "./utils/http-utils";
 import { saveImageToNote } from "./utils/save-image";
@@ -116,13 +117,15 @@ export default class ImageFetcherPlugin extends Plugin {
 	}
 
 	/**
-	 * Choose the filename stem for the saved image. For Instagram URLs the
-	 * username (e.g. `@handle` → `handle`) is preferred when the setting is on
-	 * and a username can be parsed; everything else falls back to the note title.
+	 * Choose the filename stem for the saved image. For Instagram and Threads
+	 * URLs the username (e.g. `@handle` → `handle`) is preferred when the setting
+	 * is on and a username can be parsed; everything else falls back to the note
+	 * title.
 	 */
 	private resolveBaseName(file: TFile, url: string): string {
 		if (this.settings.instagramNameByUsername) {
-			const username = instagramUsernameFromUrl(url);
+			const username =
+				instagramUsernameFromUrl(url) ?? threadsUsernameFromUrl(url);
 			if (username) return username;
 		}
 		return file.basename;

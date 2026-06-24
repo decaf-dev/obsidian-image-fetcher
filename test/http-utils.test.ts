@@ -5,6 +5,8 @@ import {
 	buildRequestHeaders,
 	instagramUsernameFromUrl,
 	isInstagramHost,
+	isThreadsHost,
+	threadsUsernameFromUrl,
 	type RequestOptions,
 } from "../src/utils/http-utils";
 
@@ -74,6 +76,45 @@ describe("instagramUsernameFromUrl", () => {
 		expect(instagramUsernameFromUrl("https://www.instagram.com/")).toBeNull();
 		expect(instagramUsernameFromUrl("https://example.com/nasa")).toBeNull();
 		expect(instagramUsernameFromUrl("not a url")).toBeNull();
+	});
+});
+
+describe("isThreadsHost", () => {
+	it("matches threads.net and threads.com and their subdomains", () => {
+		expect(isThreadsHost("https://threads.net/@nasa")).toBe(true);
+		expect(isThreadsHost("https://www.threads.net/@nasa")).toBe(true);
+		expect(isThreadsHost("https://www.threads.com/@nasa")).toBe(true);
+	});
+
+	it("rejects non-Threads and malformed URLs", () => {
+		expect(isThreadsHost("https://www.instagram.com/nasa")).toBe(false);
+		expect(isThreadsHost("https://threads.example.com/@nasa")).toBe(false);
+		expect(isThreadsHost("not a url")).toBe(false);
+		expect(isThreadsHost("")).toBe(false);
+	});
+});
+
+describe("threadsUsernameFromUrl", () => {
+	it("extracts the @-prefixed handle from profile and post URLs", () => {
+		expect(threadsUsernameFromUrl("https://www.threads.net/@nasa")).toBe(
+			"nasa",
+		);
+		expect(threadsUsernameFromUrl("https://www.threads.com/@nasa/")).toBe(
+			"nasa",
+		);
+		expect(
+			threadsUsernameFromUrl("https://www.threads.net/@nasa/post/abc123"),
+		).toBe("nasa");
+		expect(
+			threadsUsernameFromUrl("https://www.threads.net/@nasa?hl=en"),
+		).toBe("nasa");
+	});
+
+	it("returns null for the homepage, non-@ routes, and other hosts", () => {
+		expect(threadsUsernameFromUrl("https://www.threads.net/")).toBeNull();
+		expect(threadsUsernameFromUrl("https://www.threads.net/search")).toBeNull();
+		expect(threadsUsernameFromUrl("https://www.instagram.com/@nasa")).toBeNull();
+		expect(threadsUsernameFromUrl("not a url")).toBeNull();
 	});
 });
 
