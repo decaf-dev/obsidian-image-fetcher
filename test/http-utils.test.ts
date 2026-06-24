@@ -3,10 +3,8 @@ import {
 	bestFromImg,
 	bestFromSrcset,
 	buildRequestHeaders,
-	instagramUsernameFromUrl,
+	imageNameFromUrl,
 	isInstagramHost,
-	isThreadsHost,
-	threadsUsernameFromUrl,
 	type RequestOptions,
 } from "../src/utils/http-utils";
 
@@ -41,80 +39,55 @@ describe("isInstagramHost", () => {
 	});
 });
 
-describe("instagramUsernameFromUrl", () => {
-	it("extracts the username from a profile URL", () => {
+describe("imageNameFromUrl", () => {
+	const prefixes = [
+		"https://instagram.com/p/",
+		"https://www.instagram.com/",
+		"https://threads.net/@",
+	];
+
+	it("uses the first path segment after the matching prefix", () => {
 		expect(
-			instagramUsernameFromUrl("https://www.instagram.com/nasa/"),
+			imageNameFromUrl("https://instagram.com/p/ABC123/", prefixes),
+		).toBe("ABC123");
+		expect(
+			imageNameFromUrl("https://www.instagram.com/nasa/", prefixes),
 		).toBe("nasa");
-		expect(instagramUsernameFromUrl("https://instagram.com/nasa")).toBe(
-			"nasa",
-		);
 		expect(
-			instagramUsernameFromUrl("https://www.instagram.com/nasa/?hl=en"),
+			imageNameFromUrl("https://threads.net/@nasa", prefixes),
 		).toBe("nasa");
 	});
 
-	it("strips a leading @ from the handle", () => {
+	it("strips the query string and trailing slash", () => {
 		expect(
-			instagramUsernameFromUrl("https://www.instagram.com/@nasa/"),
-		).toBe("nasa");
+			imageNameFromUrl("https://instagram.com/p/ABC123/?hl=en", prefixes),
+		).toBe("ABC123");
+		expect(
+			imageNameFromUrl("https://instagram.com/p/ABC123#frag", prefixes),
+		).toBe("ABC123");
 	});
 
-	it("returns null for reserved routes that carry no username", () => {
+	it("ignores extra path segments after the first", () => {
 		expect(
-			instagramUsernameFromUrl("https://www.instagram.com/p/abc123/"),
+			imageNameFromUrl("https://instagram.com/p/ABC123/comments", prefixes),
+		).toBe("ABC123");
+	});
+
+	it("honors prefix order — the first match wins", () => {
+		// /p/ is listed before the bare profile prefix, so a post URL yields
+		// the shortcode rather than "p".
+		expect(
+			imageNameFromUrl("https://instagram.com/p/ABC123/", prefixes),
+		).toBe("ABC123");
+	});
+
+	it("returns null when no prefix matches or the match has no segment", () => {
+		expect(imageNameFromUrl("https://example.com/nasa", prefixes)).toBeNull();
+		expect(
+			imageNameFromUrl("https://www.instagram.com/", prefixes),
 		).toBeNull();
-		expect(
-			instagramUsernameFromUrl("https://www.instagram.com/reel/abc/"),
-		).toBeNull();
-		expect(
-			instagramUsernameFromUrl("https://www.instagram.com/explore/"),
-		).toBeNull();
-	});
-
-	it("returns null for the homepage and non-Instagram or malformed URLs", () => {
-		expect(instagramUsernameFromUrl("https://www.instagram.com/")).toBeNull();
-		expect(instagramUsernameFromUrl("https://example.com/nasa")).toBeNull();
-		expect(instagramUsernameFromUrl("not a url")).toBeNull();
-	});
-});
-
-describe("isThreadsHost", () => {
-	it("matches threads.net and threads.com and their subdomains", () => {
-		expect(isThreadsHost("https://threads.net/@nasa")).toBe(true);
-		expect(isThreadsHost("https://www.threads.net/@nasa")).toBe(true);
-		expect(isThreadsHost("https://www.threads.com/@nasa")).toBe(true);
-	});
-
-	it("rejects non-Threads and malformed URLs", () => {
-		expect(isThreadsHost("https://www.instagram.com/nasa")).toBe(false);
-		expect(isThreadsHost("https://threads.example.com/@nasa")).toBe(false);
-		expect(isThreadsHost("not a url")).toBe(false);
-		expect(isThreadsHost("")).toBe(false);
-	});
-});
-
-describe("threadsUsernameFromUrl", () => {
-	it("extracts the @-prefixed handle from profile and post URLs", () => {
-		expect(threadsUsernameFromUrl("https://www.threads.net/@nasa")).toBe(
-			"nasa",
-		);
-		expect(threadsUsernameFromUrl("https://www.threads.com/@nasa/")).toBe(
-			"nasa",
-		);
-		expect(
-			threadsUsernameFromUrl("https://www.threads.net/@nasa/post/abc123"),
-		).toBe("nasa");
-		expect(
-			threadsUsernameFromUrl("https://www.threads.net/@nasa?hl=en"),
-		).toBe("nasa");
-	});
-
-	it("returns null for the homepage, non-@ routes, and other hosts", () => {
-		expect(threadsUsernameFromUrl("https://www.threads.net/")).toBeNull();
-		expect(threadsUsernameFromUrl("https://www.threads.net/search")).toBeNull();
-		expect(threadsUsernameFromUrl("https://www.instagram.com/@nasa")).toBeNull();
-		expect(threadsUsernameFromUrl("not a url")).toBeNull();
+		expect(imageNameFromUrl("https://instagram.com/p/", prefixes)).toBeNull();
+		expect(imageNameFromUrl("anything", [])).toBeNull();
 	});
 });
 

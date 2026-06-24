@@ -48,6 +48,30 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 					})
 			);
 
+		// Image name URL prefixes
+		new Setting(containerEl)
+			.setName("Image name URL prefixes")
+			.setDesc(
+				"One URL prefix per line. When the note URL starts with a " +
+					"prefix, the saved image is named after the path segment " +
+					"that follows it (query string and trailing slash stripped) " +
+					"instead of the note title — e.g. https://instagram.com/p/ " +
+					"names the image after the post shortcode. The first " +
+					"matching prefix wins, so list more specific prefixes first."
+			)
+			.addTextArea((text) =>
+				text
+					.setPlaceholder("https://instagram.com/p/")
+					.setValue(this.plugin.settings.imageNamePrefixes.join("\n"))
+					.onChange(async (value) => {
+						this.plugin.settings.imageNamePrefixes = value
+							.split("\n")
+							.map((line) => line.trim())
+							.filter((line) => line.length > 0);
+						await this.plugin.saveSettings();
+					})
+			);
+
 		new Setting(containerEl).setName("Instagram").setHeading();
 
 		// Instagram cookie
@@ -64,24 +88,6 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.instagramCookieSecretId)
 					.onChange(async (value) => {
 						this.plugin.settings.instagramCookieSecretId = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		// Name Instagram images by username
-		new Setting(containerEl)
-			.setName("Name Instagram images by username")
-			.setDesc(
-				"For Instagram URLs, name the saved image after the profile " +
-					"username instead of the note title. Other sites and " +
-					"Instagram URLs without a username (e.g. /p/<shortcode>) " +
-					"still use the note title."
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.instagramNameByUsername)
-					.onChange(async (value) => {
-						this.plugin.settings.instagramNameByUsername = value;
 						await this.plugin.saveSettings();
 					})
 			);

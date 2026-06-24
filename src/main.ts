@@ -4,9 +4,8 @@ import ImageFetcherSettingTab from "./obsidian/image-fetcher-setting-tab";
 import { ImagePickerModal } from "./obsidian/image-picker-modal";
 import {
 	fetchImagesFromUrl,
-	instagramUsernameFromUrl,
+	imageNameFromUrl,
 	isInstagramHost,
-	threadsUsernameFromUrl,
 	type RequestOptions,
 } from "./utils/http-utils";
 import { saveImageToNote } from "./utils/save-image";
@@ -14,8 +13,8 @@ import { saveImageToNote } from "./utils/save-image";
 export interface ImageFetcherSettings {
 	frontmatterUrlKey: string;
 	frontmatterImageKey: string;
+	imageNamePrefixes: string[];
 	instagramCookieSecretId: string;
-	instagramNameByUsername: boolean;
 	instagramScrollCount: number;
 	userAgent: string;
 	debug: boolean;
@@ -29,8 +28,8 @@ export const DEFAULT_INSTAGRAM_SCROLL_COUNT = 4;
 const DEFAULT_SETTINGS: ImageFetcherSettings = {
 	frontmatterUrlKey: "url",
 	frontmatterImageKey: "image",
+	imageNamePrefixes: [],
 	instagramCookieSecretId: "",
-	instagramNameByUsername: true,
 	instagramScrollCount: DEFAULT_INSTAGRAM_SCROLL_COUNT,
 	userAgent: DEFAULT_USER_AGENT,
 	debug: false,
@@ -117,18 +116,16 @@ export default class ImageFetcherPlugin extends Plugin {
 	}
 
 	/**
-	 * Choose the filename stem for the saved image. For Instagram and Threads
-	 * URLs the username (e.g. `@handle` → `handle`) is preferred when the setting
-	 * is on and a username can be parsed; everything else falls back to the note
-	 * title.
+	 * Choose the filename stem for the saved image. If the note URL matches one
+	 * of the configured `imageNamePrefixes`, the path segment after that prefix
+	 * is used (e.g. prefix `https://instagram.com/p/` → the shortcode);
+	 * otherwise it falls back to the note title.
 	 */
 	private resolveBaseName(file: TFile, url: string): string {
-		if (this.settings.instagramNameByUsername) {
-			const username =
-				instagramUsernameFromUrl(url) ?? threadsUsernameFromUrl(url);
-			if (username) return username;
-		}
-		return file.basename;
+		return (
+			imageNameFromUrl(url, this.settings.imageNamePrefixes) ??
+			file.basename
+		);
 	}
 
 	/** Open the picker for the fetched images and save the chosen one. */
