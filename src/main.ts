@@ -125,7 +125,7 @@ export default class ImageFetcherPlugin extends Plugin {
 			const username = instagramUsernameFromUrl(url);
 			if (username) return username;
 		}
-		return `${file.basename}-image`;
+		return file.basename;
 	}
 
 	/** Open the picker for the fetched images and save the chosen one. */
