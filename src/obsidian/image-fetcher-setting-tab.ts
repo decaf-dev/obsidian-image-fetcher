@@ -19,7 +19,7 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 
 		// Frontmatter URL key
 		new Setting(containerEl)
-			.setName("Frontmatter URL key")
+			.setName("URL property")
 			.setDesc("The property name to read the page URL from in frontmatter")
 			.addText((text) =>
 				text
@@ -33,7 +33,7 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 
 		// Frontmatter image key
 		new Setting(containerEl)
-			.setName("Frontmatter image key")
+			.setName("Image property")
 			.setDesc(
 				"The property name to write the saved image to in frontmatter"
 			)
@@ -148,11 +148,11 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl).setName("Logs").setHeading();
+		new Setting(containerEl).setName("Debug").setHeading();
 
 		// Debug logging
 		new Setting(containerEl)
-			.setName("Debug logging")
+			.setName("Enable logs")
 			.setDesc(
 				"Log request details to the developer console " +
 					"(Ctrl/Cmd+Opt+I). The cookie value is never logged."
