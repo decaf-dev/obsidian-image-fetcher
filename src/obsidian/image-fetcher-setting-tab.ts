@@ -48,6 +48,24 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 					})
 			);
 
+		// User-Agent
+		new Setting(containerEl)
+			.setName("User-Agent")
+			.setDesc(
+				"Sent with every request. A real browser User-Agent helps " +
+					"Instagram return image metadata. Leave blank to use the default."
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_USER_AGENT)
+					.setValue(this.plugin.settings.userAgent)
+					.onChange(async (value) => {
+						this.plugin.settings.userAgent =
+							value || DEFAULT_USER_AGENT;
+						await this.plugin.saveSettings();
+					})
+			);
+
 		new Setting(containerEl).setName("Image Name").setHeading();
 
 		// Name Instagram images by username
@@ -129,24 +147,6 @@ export default class ImageFetcherSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
-
-		// User-Agent
-		new Setting(containerEl)
-			.setName("User-Agent")
-			.setDesc(
-				"Sent with every request. A real browser User-Agent helps " +
-					"Instagram return image metadata. Leave blank to use the default."
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder(DEFAULT_USER_AGENT)
-					.setValue(this.plugin.settings.userAgent)
-					.onChange(async (value) => {
-						this.plugin.settings.userAgent =
-							value || DEFAULT_USER_AGENT;
-						await this.plugin.saveSettings();
-					})
-			);
 
 		new Setting(containerEl).setName("Debug").setHeading();
 
